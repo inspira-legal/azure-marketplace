@@ -55,7 +55,7 @@
       },
       "sku": {
         "name": "Standard"
-      }
+      },
       "properties": {
         "publicIPAllocationMethod": "Static",
         "dnsSettings": {
