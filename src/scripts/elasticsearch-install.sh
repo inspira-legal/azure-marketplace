@@ -26,8 +26,8 @@ help()
     echo "    -d      cluster uses dedicated masters"
     echo "    -Z      <number of nodes> hint to the install script how many data nodes we are provisioning"
 
-    echo "    -B      bootstrap password" 
-    echo "    -A      elastic user password"  
+    echo "    -B      bootstrap password"
+    echo "    -A      elastic user password"
     echo "    -K      kibana user password"
     echo "    -S      logstash_system user password"
     echo "    -F      beats_system user password"
@@ -269,9 +269,10 @@ done
 #########################
 
 # supports security features with a basic license
-if [[ $(dpkg --compare-versions "$ES_VERSION" "ge" "7.1.0"; echo $?) -eq 0 || ($(dpkg --compare-versions "$ES_VERSION" "ge" "6.8.0"; echo $?) -eq 0 && $(dpkg --compare-versions "$ES_VERSION" "lt" "7.0.0"; echo $?) -eq 0) ]]; then
-  BASIC_SECURITY=1
-fi
+# if [[ $(dpkg --compare-versions "$ES_VERSION" "ge" "7.1.0"; echo $?) -eq 0 || ($(dpkg --compare-versions "$ES_VERSION" "ge" "6.8.0"; echo $?) -eq 0 && $(dpkg --compare-versions "$ES_VERSION" "lt" "7.0.0"; echo $?) -eq 0) ]]; then
+#   BASIC_SECURITY=1
+# fi
+BASIC_SECURITY=0
 
 # zen2 should emit the ports from hosts
 if dpkg --compare-versions "$ES_VERSION" "ge" "7.0.0"; then
@@ -464,14 +465,14 @@ node_is_up()
 {
   exec 17>&1
   local response=$(curl -XGET -u "elastic:$1" -H 'Content-Type: application/json' --write-out '\n%{http_code}\n' \
-    "$PROTOCOL://localhost:9200/_cluster/health?wait_for_status=green&timeout=30s&filter_path=status" $CURL_SWITCH | tee /dev/fd/17) 
+    "$PROTOCOL://localhost:9200/_cluster/health?wait_for_status=green&timeout=30s&filter_path=status" $CURL_SWITCH | tee /dev/fd/17)
   local curl_error_code=$?
   local http_code=$(echo "$response" | tail -n 1)
   exec 17>&-
   if [[ $curl_error_code -ne 0 ]]; then
     return $curl_error_code
   fi
-  
+
   if [[ $http_code -eq 200 ]]; then
     local body=$(echo "$response" | head -n -1)
     local status=$(jq -r .status <<< $body)
@@ -555,14 +556,14 @@ curl_ignore_409 () {
 }
 
 # waits for the .security alias/index to be green
-wait_for_green_security_index() 
+wait_for_green_security_index()
 {
   local retries=0
   until [ "$retries" -ge 12 ]
   do
     exec 17>&1
     local response=$(curl -XGET -u "elastic:$USER_ADMIN_PWD" -H 'Content-Type: application/json' --write-out '\n%{http_code}\n' \
-      "$PROTOCOL://localhost:9200/_cluster/health/.security?wait_for_status=green&timeout=30s&filter_path=status" $CURL_SWITCH | tee /dev/fd/17) 
+      "$PROTOCOL://localhost:9200/_cluster/health/.security?wait_for_status=green&timeout=30s&filter_path=status" $CURL_SWITCH | tee /dev/fd/17)
     local curl_error_code=$?
     local http_code=$(echo "$response" | tail -n 1)
     exec 17>&-
@@ -590,7 +591,7 @@ wait_for_green_security_index()
   return 127
 }
 
-escape_pwd() 
+escape_pwd()
 {
   echo $1 | sed 's/"/\\"/g'
 }
@@ -656,7 +657,7 @@ apply_security_settings()
     local KIBANA_USER="kibana"
     if dpkg --compare-versions "$ES_VERSION" "ge" "7.8.0"; then
       KIBANA_USER="kibana_system"
-    fi 
+    fi
 
     echo $KIBANA_JSON | curl_ignore_409 -XPUT -u "elastic:$USER_ADMIN_PWD" "$XPACK_USER_ENDPOINT/$KIBANA_USER/_password" -d @-
     if [[ $? != 0 ]];  then
@@ -694,7 +695,7 @@ apply_security_settings()
       exit 10
     fi
     log "[apply_security_settings] updated built-in apm_system user password"
-  
+
     #update builtin `remote_monitoring_user`
     local ESCAPED_USER_REMOTE_MONITORING_PWD=$(escape_pwd $USER_REMOTE_MONITORING_PWD)
     local REMOTE_MONITORING_JSON=$(printf '{"password":"%s"}\n' $ESCAPED_USER_REMOTE_MONITORING_PWD)
@@ -703,7 +704,7 @@ apply_security_settings()
       log "[apply_security_settings] could not update the built-in remote_monitoring_user user"
       exit 10
     fi
-    log "[apply_security_settings] updated built-in remote_monitoring_user user password" 
+    log "[apply_security_settings] updated built-in remote_monitoring_user user password"
 }
 
 create_keystore_if_not_exists()
@@ -935,7 +936,7 @@ configure_elasticsearch_yaml()
         echo "node.master: true" >> $ES_CONF
         echo "node.data: true" >> $ES_CONF
     fi
-    
+
     echo "network.host: [_site_, _local_]" >> $ES_CONF
     echo "node.max_local_storage_nodes: 1" >> $ES_CONF
 
@@ -1025,8 +1026,8 @@ configure_elasticsearch_yaml()
     fi
 
     # Configure SAML realm only for valid versions of Elasticsearch and if the conditions are met
-    if [[ -n "$SAML_METADATA_URI" && -n "$SAML_SP_URI" && ( -n "$HTTP_CERT" || -n "$HTTP_CACERT" ) && ${INSTALL_XPACK} -ne 0 ]]; then     
-      log "[configure_elasticsearch_yaml] configuring native realm name 'native1' as SAML realm will be configured"     
+    if [[ -n "$SAML_METADATA_URI" && -n "$SAML_SP_URI" && ( -n "$HTTP_CERT" || -n "$HTTP_CACERT" ) && ${INSTALL_XPACK} -ne 0 ]]; then
+      log "[configure_elasticsearch_yaml] configuring native realm name 'native1' as SAML realm will be configured"
       {
           echo -e ""
           # include the realm type in the setting name in 7.x +
@@ -1039,7 +1040,7 @@ configure_elasticsearch_yaml()
           echo -e "  order: 0"
           echo -e ""
       } >> $ES_CONF
-      log "[configure_elasticsearch_yaml] configured native realm"    
+      log "[configure_elasticsearch_yaml] configured native realm"
       log "[configure_elasticsearch_yaml] configuring SAML realm named 'saml_aad' for $SAML_SP_URI"
       [ -d /etc/elasticsearch/saml ] || mkdir -p /etc/elasticsearch/saml
       wget --retry-connrefused --waitretry=1 -q "$SAML_METADATA_URI" -O /etc/elasticsearch/saml/metadata.xml
