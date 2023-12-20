@@ -58,6 +58,7 @@
       },
       "properties": {
         "publicIPAllocationMethod": "Static",
+        "publicIPAddressVersion": "IPv4",
         "dnsSettings": {
           "domainNameLabel": "[concat('kb-', uniqueString(resourceGroup().id, deployment().name, variables('publicIpName')))]"
         }
